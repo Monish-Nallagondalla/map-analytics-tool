@@ -1,0 +1,1 @@
+{"maps": ["AmbroseValley", "GrandRift", "Lockdown"], "mapConfig": {"AmbroseValley": {"scale": 900, "origin_x": -370, "origin_z": -473}, "GrandRift": {"scale": 581, "origin_x": -290, "origin_z": -290}, "Lockdown": {"scale": 1000, "origin_x": -500, "origin_z": -500}}, "dates": ["2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14"]}
