@@ -141,7 +141,7 @@ export default function Sidebar({
                 <div className="match-info">
                   <span>👤{m.humans}</span>
                   <span>🤖{m.bots}</span>
-                  <span>#{Object.values(m.events || {}).reduce((a, b) => a + b, 0)}</span>
+                  <span>⚡{Object.values(m.events || {}).reduce((a, b) => a + b, 0)}</span>
                   <span>{dateFormatted}</span>
                 </div>
               </div>
