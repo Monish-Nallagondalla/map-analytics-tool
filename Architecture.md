@@ -1,167 +1,149 @@
-# Architecture — LILA BLACK Map Analytics
+# Architecture
 
-## My Approach
+## How I Approached This
 
-Before writing a single line of code, I asked myself two questions: **Who is my user?** and **What decision does this tool help them make?**
+The first thing I noticed in the data was that only 3 human players killed another human in 796 matches across 5 days. Three. That single number told me more about LILA BLACK than the entire README. This is not a deathmatch. PvP is a rare, high stakes event. The primary combat loop is human vs bot (2,415 bot kills). Any tool I build that treats kills as the main story would be telling the wrong story.
 
-The user is a Level Designer. They've spent weeks placing buildings, cover objects, loot spawns, and extraction points. The map went live. Now they need to know — **did players use the map the way I intended?**
+That realization shaped my entire approach. I was not building a generic analytics dashboard. I was building a tool that answers the question every Level Designer asks after a map goes live: "Did players use my map the way I intended?"
 
-That reframing shaped every decision I made. I wasn't building a data dashboard. I was building a tool that answers: *"Where did my map succeed, and where did it fail?"*
+I used Claude and ChatGPT as implementation tools throughout this project. Every product decision, feature prioritization, and UX choice was mine. I decided what to build and why. The AI helped me write code faster, the same way a PM works with an engineering team.
 
----
+## My Process
 
-## First Impressions of the Data
+**Step 1: Understand the data before touching code.**
 
-Before touching the codebase, I explored the raw data stats. Four things jumped out immediately:
+I wrote exploration scripts to understand what I was working with. The stats surprised me immediately.
 
-1. **Only 3 human PvP kills in 5 days.** Three. In 796 matches. This told me LILA BLACK isn't a deathmatch — it's an extraction shooter where PvP is rare and high-stakes. Every feature I built had to respect that context.
+Only 3 human PvP kills in 796 matches across 5 days. 2,415 bot kills. 39 storm deaths, all humans, zero bots. These numbers told me LILA BLACK is not a deathmatch game. It is an extraction shooter where the primary combat experience is human vs bot, and the storm is a late game threat that catches humans but never bots.
 
-2. **2,415 BotKills vs 3 human Kills.** Bot combat IS the combat experience. Any "kill heatmap" that only tracks PvP would show an almost empty map. I made BotKill the primary combat metric.
+If I had built a generic kill heatmap without understanding this, it would have shown an almost empty map. The data forced me to rethink what "combat" means in this game.
 
-3. **Only 39 storm deaths across all maps.** That's a small number, but it's the most important number for a Level Designer. Every storm death means a player couldn't escape in time — that's a map layout problem, not a player skill problem.
+**Step 2: Think about the Level Designer's daily workflow.**
 
-4. **Minimap images don't match the README spec.** The README says 1024×1024. Actual sizes: AmbroseValley is 4320×4320, Lockdown is 9000×9000. This was either an oversight or a deliberate test. Either way, hardcoding 1024 would break coordinate mapping silently — everything would render, just in the wrong place.
+I put myself in their shoes. They open their map editor, they have placed buildings, cover, loot spawns, extraction points. Now they need answers:
 
----
+"I placed a high value loot spawn in the northeast corner. Are players actually going there?"
+"That chokepoint I designed between buildings. Is it creating interesting fights or just frustration?"
+"There is a whole section of the map I spent weeks on. Is anyone even visiting it?"
+"The storm is supposed to create urgency. Are players dying to it because the layout makes escape impossible from certain zones?"
 
-## Tech Stack — Why These Choices
+Every feature I built maps to one of these questions.
 
-| What | Choice | Why (honest reason) |
-|------|--------|---------------------|
-| Frontend | React + Vite | I needed 12+ interdependent filter states (map, date, player type, heatmap mode, event toggles, zoom, timeline position). React's state model handles this cleanly. Vite because it's fast and I had 10 hours, not 10 days |
-| Rendering | HTML5 Canvas | 28K events on AmbroseValley. I tried thinking through SVG — that's 28,000 DOM nodes for one map. Canvas draws it all in a single pass with zero layout cost |
-| Heatmap | Custom 32×32 grid + CSS blur | I considered heatmap.js and deck.gl. Both are 200KB+ libraries for one feature. I wrote 60 lines of grid accumulation + gaussian spread that does exactly what I need and nothing I don't |
-| Data pipeline | Python → static JSON | The data is a fixed 5-day dump. There's no real-time feed, no database updates. A backend server would add complexity, cost, and a failure point — all for zero benefit. Static JSON on a CDN is faster, free, and can't go down |
-| AI Analyst | Multi-provider LLM (optional) | I come from an AI engineering background. I knew I could add a natural language query layer that sends current dashboard context to an LLM. But I also knew it shouldn't be a gate — the tool works fully without it. The API key modal has a Skip button for exactly this reason |
-| Hosting | Vercel | Free, zero-config, gives me a shareable URL in 2 minutes. No reason to overcomplicate this |
+**Step 3: Explore the data, then decide what to visualize.**
 
----
+I ran analysis scripts on the processed data and found patterns that directly inform level design. 55 to 67 percent of every map is completely unused. Storm deaths cluster in specific quadrants. Bots and humans have moderate path correlation but distinct patterns. These findings shaped which visualizations I prioritized and how I designed the heatmap modes.
 
-## How Data Flows
-1,243 parquet files (89K events across 5 days)
-│
-▼
-preprocess.py
-├── Read all files, decode event bytes
-├── Detect bots (UUID vs numeric user_id)
-├── Convert world (x, z) → UV (0–1 range)
-├── Tag each file with date from folder name
-└── Resize minimaps to 1024×1024 for web
-│
-▼
-optimize.py
-├── Downsample Position events (every 3rd)
-├── Keep ALL combat/loot/storm events
-└── AmbroseValley: 10.4MB → 4.2MB
-│
-▼
-public/data/ (per-map JSON)
-│
-▼
-React app loads on demand
-Canvas renders: paths → heatmap → markers
-Filters applied in-memory (no re-fetch)
+**Step 4: Build, test, iterate on UX.**
 
-**Why per-map JSON instead of one big file?** A designer analyzing Lockdown shouldn't wait for AmbroseValley's 4.2MB to download. Each map loads independently.
+I tested every feature myself. When bot paths were invisible on the map, I changed the color. When kill markers and death markers looked too similar, I redesigned them with distinct shapes and colors. When the toggle switches did not respond to clicks, I fixed the CSS layering. When the timeline showed 0:00/0:00, I debugged the timestamp math. Every fix came from actually using the tool and noticing what did not work.
 
-**Why downsample positions but keep all combat events?** Positions are 85%+ of the data — they draw paths. Keeping every 3rd still produces smooth, accurate paths. But a Kill event or Storm Death? Those are rare and critical. Losing even one would corrupt the analysis.
+## Tech Stack
 
----
+| Layer | What I Chose | Why |
+|-------|-------------|-----|
+| Frontend | React + Vite | I needed 12+ interdependent filter states. React handles complex state well. Vite is fast for iteration |
+| Rendering | HTML5 Canvas | 28K+ data points per map. SVG would create thousands of DOM nodes. Canvas draws everything in one pass |
+| Heatmap | Custom canvas grid with CSS blur | Zero external dependencies. 60 lines of code. Full control over color ramps and grid resolution |
+| Data Pipeline | Python (pyarrow + Pillow) to static JSON | Parquet to JSON runs once. No backend server needed. Static files on a CDN are free and fast |
+| AI Analyst | Multi provider LLM (Groq, OpenAI, Claude) | Optional chat panel. Works without it. I added this because of my AI engineering background and I believe the future of analytics tools is conversational |
+| Hosting | Vercel | Free tier, zero config, instant shareable URL |
 
-## Coordinate Mapping — The Tricky Part
+## Data Flow
 
-The README gives scale + origin per map. The conversion is:
-UV:     u = (x - origin_x) / scale
-v = 1 - (z - origin_z) / scale     ← Y-flip for image space
-Pixel:  px = u × canvas_width
-py = v × canvas_height
+The pipeline runs in two stages.
 
-### Three things I caught:
+**Preprocessing (runs once locally):**
 
-**1. `y` is elevation, not map Y.** The parquet has `x`, `y`, `z`. For a 2D minimap, you use `x` and `z`. The `y` column is vertical height in the 3D world. Using it for mapping would place every single point wrong, and it would look plausible enough that you might not notice.
+1,243 parquet files across 5 day folders go into preprocess.py. It reads every file, decodes the event bytes column to strings, detects bots by checking if user_id is a UUID or numeric, converts world coordinates (x, z) to UV normalized (0 to 1) range, and resizes minimap images to 1024x1024 for web delivery.
 
-**2. Image sizes don't match documentation.** The README says 1024×1024. Reality: AmbroseValley is 4320×4320, GrandRift is 2160×2158 (not even square), Lockdown is 9000×9000. My fix: convert everything to UV (0-1) space during preprocessing. The frontend multiplies by canvas size at render time. This makes the tool resolution-independent — if LILA ships 8K minimaps tomorrow, zero code changes.
+optimize.py then downsamples Position events (keeps every 3rd) while preserving all combat, loot, and storm events at full fidelity. This reduced AmbroseValley from 10.4MB to 4.2MB without losing path accuracy.
 
-**3. The Y-flip is applied once, during preprocessing.** This eliminates a class of bugs where the flip gets applied twice or forgotten in one code path. The frontend simply plots `(u, v)` directly.
+Output is per map JSON files. The frontend loads only the map you are viewing.
 
-**Verification:** I validated using the sample coordinates from the README (x=-301.45, z=-355.55 on AmbroseValley). The plotted point lands in the correct map region.
+**Frontend (React app):**
 
----
+On load, it fetches matches.json and config.json. When you select a map, it loads that map's JSON. All filtering happens in memory. No network calls after initial load. Canvas renders paths first, then heatmap overlay, then event markers on top.
 
-## Features I Built — And Why Each One Exists
+## Coordinate Mapping
 
-Every feature maps to a Level Designer's actual question:
+This was the part they flagged as tricky, and it was.
 
-| Level Designer asks... | Feature that answers it |
-|------------------------|------------------------|
-| "Where do fights happen?" | Kill Zones heatmap — shows BotKill + Kill density |
-| "Where does my map fail players?" | Death Zones heatmap + Storm Death markers (cyan diamonds with glow) |
-| "Am I wasting map space?" | Map Usage overlay — grid shows used (green) vs dead zones (red) with utilization percentage |
-| "How does a typical match play out?" | Timeline playback — scrub or auto-play through a match, watching events appear chronologically |
-| "Do bots go where humans go?" | Player type filter (Humans/Bots toggles) — toggle each independently, compare paths visually |
-| "Show me only bot-exclusive matches" | Contains vs Exclusive filter mode — "Contains" shows matches with bots (may include humans), "Exclusive" shows bot-only matches |
-| "Find that one match from Tuesday" | Match search bar — search by match ID, auto-switches to correct map |
-| "Just show me kill hotspots, fast" | Quick Actions dropdown — preset level designer workflows that trigger multiple filters in one click |
-| "What should I investigate?" | AI Analyst — optional LLM chat that analyzes current view context and suggests areas of concern |
+The README provides scale and origin values per map. The conversion:
+u = (x - origin_x) / scale
+v = 1 - ((z - origin_z) / scale)
 
-### The "Contains vs Exclusive" filter — why it exists
+Then pixel_x = u * canvas_width, pixel_y = v * canvas_height.
 
-When I toggled "Bots ON, Humans OFF," I expected to see only bot matches. Instead I saw matches like `0f169d20` with 👤1 🤖6 — a human was in there. The filter was showing matches that *contain* bots, not matches that are *exclusively* bots.
+Three things I caught that could easily go wrong:
 
-Both behaviors are useful. A designer studying bot pathfinding wants exclusive bot matches. A designer studying how bots interact with humans wants mixed matches. So I added a toggle between both modes. It only appears when it's relevant (when one player type is deselected).
+**1. The y column is not map Y.** The data has x, y, z columns. The y column is elevation (vertical height in the 3D world). For 2D minimap plotting you use only x and z. Using y would place every point incorrectly and it would look plausible enough that you might not notice.
 
-### The AI Analyst — why I built it, and what I'd do differently
+**2. Minimap images are not 1024x1024.** The README states 1024x1024 but actual sizes are AmbroseValley 4320x4320, GrandRift 2160x2158 (not even square), and Lockdown 9000x9000. I convert to UV space during preprocessing so the tool works at any resolution. If LILA ships higher res minimaps tomorrow, zero code changes needed.
 
-I added an optional AI chat panel because I come from an AI engineering background and I believe the future of analytics tools is conversational. A Level Designer shouldn't need to learn 12 filter controls — they should be able to type "where are bots dying on Lockdown?" and get an answer.
+**3. I verified the mapping.** Using the sample coordinates from the README (x=-301.45, z=-355.55 on AmbroseValley), my output produces pixel_x=78, pixel_y=890. The README expects exactly that. I also confirmed 100% of all 28,791 AmbroseValley events fall within bounds (u and v between 0 and 1). Zero out of bounds points.
 
-**What works today:** The AI receives current view context (event counts, map, player stats) and can answer summary questions. It can also trigger filter changes via structured output — "let me switch to the kill heatmap for you."
+## Features and the User Questions They Answer
 
-**What I'd build with more time:** The current AI sees aggregate counts, not spatial data. Given another sprint, I'd send the heatmap grid data (which zones are hot/cold) so the AI could say "the northeast quadrant of AmbroseValley has 40% of all kills but only 15% of the map area — this is a chokepoint worth investigating." That's the real value: spatial reasoning, not just counting.
+| A Level Designer asks | The feature that answers it |
+|----------------------|---------------------------|
+| Where do fights happen on my map? | Kill Zones heatmap showing BotKill + Kill density with gaussian spread |
+| Where does my map fail players? | Death Zones heatmap plus Storm Death markers (cyan diamonds with glow) |
+| Am I wasting map space? | Map Usage overlay showing used zones (green) vs dead zones (red) with utilization percentage |
+| How does a typical match play out? | Timeline playback with play, pause, reset. Scrub or auto play through a match watching events appear chronologically |
+| Do bots go where humans go? | Player type toggles. Turn off humans, see only bot paths. Flip it. Compare visually |
+| Show me only bot exclusive matches | Contains vs Exclusive filter mode. Contains shows matches with bots (may include humans). Exclusive shows matches with only bots |
+| Find that one match from Tuesday | Match search bar in the header. Type a partial match ID, results appear, click to jump directly to that match on the correct map |
+| Just show me kill hotspots, fast | Quick Actions dropdown with preset Level Designer workflows that trigger multiple filters in one click |
+| What should I investigate on this map? | AI Analyst chat panel with preset suggestions generated from actual current data |
 
-The AI is behind an optional API key gate (Groq/OpenAI/Claude) with a Skip button. The tool is 100% functional without it. I didn't want the AI to be a gimmick that blocks usage.
+## The AI Analyst: Why I Built It
 
----
+I come from an AI engineering background. I have built multi agent LLM systems, RAG pipelines, and conversational AI products. When I looked at this dashboard with 12+ filter controls, I thought: a Level Designer should not need to learn all of these. They should be able to type "where are bots dying on Lockdown?" and get an answer.
 
-## Assumptions & Ambiguity
+The AI analyst is optional. On first load, you can enter a Groq, OpenAI, or Claude API key, or skip entirely. The dashboard works 100% without it.
 
-| What I encountered | What I decided |
+What the AI does today: it receives current view context (event counts, selected map, player stats) and answers questions. It can also trigger filter changes through structured output.
+
+What I would build with more time: spatial context. Right now the AI sees aggregate counts, not where on the map things happen. With another sprint I would send the heatmap grid data so the AI could say "the SE quadrant has 40% of all kills but only 20% of map area, this is likely a chokepoint." That is the real value and that is where I would take this product next.
+
+## The Contains vs Exclusive Filter: A Small Detail That Matters
+
+When I toggled "Humans OFF, Bots ON," I expected to see only bot matches. Instead I saw matches like 0f169d20 with 1 human and 6 bots. The filter was showing matches that contain bots, not matches that are exclusively bots.
+
+Both behaviors are useful for different analysis. A designer studying bot pathfinding wants exclusive bot matches (no human interference). A designer studying how bots interact with humans wants mixed matches. So I added a toggle between both modes. It only appears when it is relevant.
+
+This is the kind of detail I care about. Not adding features for the sake of features, but noticing when a feature does not behave the way a user would expect and fixing it.
+
+## Assumptions
+
+| What I Encountered | What I Decided |
 |-------------------|----------------|
-| Timestamps show 1970-01-21 dates | Epoch-based match-relative time (~1.77B ms). Used for ordering within matches only. Actual dates from folder names |
-| Files have no `.parquet` extension | Treated all non-hidden files as parquet. pyarrow reads by file header, not extension |
-| February 14 is a partial day (79 files vs 437 for Feb 10) | Included as-is. The tool naturally shows fewer matches for this date |
-| 3 human Kill events in 5 days | Not a data error — LILA BLACK is an extraction shooter. PvP is rare by design. Adjusted all analysis to focus on BotKill as primary combat metric |
-| Position sampling rate is unknown | Assumed game-server-side sampling. Downsampled further (every 3rd) for web. Visual path accuracy verified manually |
-| GrandRift minimap is 2160×2158 (not square) | Resized to 1024×1024. The 2px height difference is imperceptible |
+| Timestamps show 1970 dates | Epoch based match relative times. Used for ordering within matches only. Actual dates from folder names |
+| Files have no .parquet extension | Treated all non hidden files as parquet. pyarrow reads by file header not extension |
+| February 14 is partial (79 files vs 437 for Feb 10) | Included as is. The tool naturally shows fewer matches for this date |
+| 3 human kills in 5 days | Not a bug. LILA BLACK is an extraction shooter. PvP is rare by design. Adjusted all analysis to focus on BotKill |
+| GrandRift minimap is 2160x2158 (not square) | Resized to 1024x1024. The 2 pixel difference is imperceptible |
+| Position sampling rate unknown | Game server pre samples. I downsampled further (every 3rd) for web performance. Verified paths visually |
 
----
+## Tradeoffs
 
-## Major Tradeoffs
+| Decision | What I Considered | What I Chose | Why |
+|----------|------------------|-------------|-----|
+| Data loading | Single mega JSON | Per map JSON files | Users only download the map they are viewing |
+| Rendering | SVG elements | Canvas | 28K points would create thousands of DOM nodes |
+| Heatmap | heatmap.js library | Custom 60 line grid | Zero dependencies, full control, lighter payload |
+| Backend | Flask API | Static files, no backend | Fixed data dump. No real time updates needed. Static hosting is free |
+| Minimap size | Original (up to 9000px) | Resized to 1024x1024 | 9000px images are 15MB+. 1024 is sufficient for analysis |
+| AI integration | Bundled with API key | Optional with skip button | Tool must work without it. No friction for evaluators |
 
-| Decision | Considered | Chose | Why |
-|----------|-----------|-------|-----|
-| One JSON vs per-map | Single file simpler to manage | Per-map files | Users only download what they need. AmbroseValley users don't wait for Lockdown data |
-| SVG vs Canvas | SVG gives free interactivity (hover, click) | Canvas | 28K+ points. Canvas draws in one pass. SVG would create 28K DOM nodes |
-| Library heatmap vs custom | heatmap.js is battle-tested | Custom 60-line grid | Zero dependency, full control, lighter payload. For a 32×32 grid, a library is overkill |
-| Backend vs static | Backend enables real-time queries | Static JSON | Fixed data dump. Static = free hosting, no maintenance, no failure points |
-| AI bundled vs optional | Bundled AI is a smoother UX | Optional with Skip | No cost to evaluators. Tool works fully without API key. Respects user choice |
-| Strict vs flexible player filter | Simple on/off toggle | Contains + Exclusive modes | Both modes serve different analysis needs. Toggle appears contextually |
+## What I Would Build Next
 
----
+If I had one more sprint, I would build side by side match comparison. The data shows AmbroseValley averages 3.2 kills per match but some matches have 12+ kills while others have zero. A Level Designer needs to understand why. Placing two matches next to each other with synced timelines would let them see: was it the player count? The loot distribution? The storm timing? Right now they can look at one match at a time. Comparison is where the real design insights live.
 
-## What I'd Build Next
+Beyond that: storm path visualization (overlaying storm progression on the map), spatial context for the AI analyst (feeding it heatmap grid data instead of just counts), and player retention funnels (entry to loot to combat to extraction).
 
-Given more time, in priority order:
+## Time
 
-1. **Side-by-side match comparison** — "Why did this match have 12 kills and this one had 2 on the same map?" Place two canvas views next to each other with synced timeline
-2. **Storm path visualization** — Overlay the storm's progression on the map. Correlate storm death locations with storm timing to identify zones where extraction is geometrically impossible
-3. **Player retention funnel** — Entry → Loot → Combat → Extract/Die. Show where in this funnel players drop off per map region
-4. **Spatial AI context** — Feed the AI analyst heatmap grid data, not just event counts, enabling spatial reasoning about map zones
-5. **Per-weapon kill analysis** — If weapon data were added to the telemetry, overlay weapon effectiveness by zone to inform cover placement
+About 10 to 12 hours total. Data exploration and architecture decisions took 2 hours. Core visualization and coordinate mapping took 4 hours. Filters, timeline, and UX iteration took 3 hours. AI analyst and documentation took the rest.
 
----
-
-## Time Spent
-
-~10-12 hours total across data exploration, architecture decisions, implementation, and iteration. The assignment suggested 10-15 hours. I focused on getting fewer features right rather than more features half-working.
-
-The preprocessing pipeline (parquet → optimized JSON) took about 1 hour. The core visualization (canvas rendering, coordinate mapping, heatmaps) took about 4 hours. Filters, timeline, and UX polish took about 3 hours. The AI analyst and documentation took the remaining time.
+I focused on fewer features done right rather than more features done halfway.

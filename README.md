@@ -1,4 +1,4 @@
-markdown# LILA BLACK Map Analytics
+# Map Analytics Tool
 
 A browser based player telemetry visualization tool for Level Designers to analyze player behavior across LILA BLACK's three maps.
 
