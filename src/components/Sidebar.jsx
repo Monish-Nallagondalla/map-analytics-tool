@@ -100,7 +100,7 @@ export default function Sidebar({
         <h3>Match Filters</h3>
         <div className="slider-row">
           <span className="slider-label">Min Humans</span>
-          <input type="range" min="0" max="5" step="1" value={minHumans}
+          <input type="range" min="0" max="3" step="1" value={minHumans}
             onChange={e => setMinHumans(parseInt(e.target.value))}
             className="size-slider" />
           <span className="slider-value">{minHumans}</span>
@@ -114,7 +114,7 @@ export default function Sidebar({
         </div>
         <div className="slider-row">
           <span className="slider-label">Min Events</span>
-          <input type="range" min="0" max="100" step="5" value={minEvents}
+          <input type="range" min="0" max="1216" step="10" value={minEvents}
             onChange={e => setMinEvents(parseInt(e.target.value))}
             className="size-slider" />
           <span className="slider-value">{minEvents}</span>
