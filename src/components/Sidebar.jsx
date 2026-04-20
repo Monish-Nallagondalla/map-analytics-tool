@@ -13,6 +13,7 @@ export default function Sidebar({
   const [filterMode, setFilterMode] = useState('contains')
   const [minBots, setMinBots] = useState(0)
   const [minEvents, setMinEvents] = useState(0)
+  const [minHumans, setMinHumans] = useState(0)
 
   const heatmapOptions = [
     { key: 'none', label: 'Off' },
@@ -34,6 +35,7 @@ export default function Sidebar({
     }
 
     if (m.bots < minBots) return false
+    if (m.humans < minHumans) return false
     const totalEvents = Object.values(m.events || {}).reduce((a, b) => a + b, 0)
     if (totalEvents < minEvents) return false
     return true
@@ -96,6 +98,13 @@ export default function Sidebar({
 
       <div className="sidebar-section">
         <h3>Match Filters</h3>
+        <div className="slider-row">
+          <span className="slider-label">Min Humans</span>
+          <input type="range" min="0" max="5" step="1" value={minHumans}
+            onChange={e => setMinHumans(parseInt(e.target.value))}
+            className="size-slider" />
+          <span className="slider-value">{minHumans}</span>
+        </div>
         <div className="slider-row">
           <span className="slider-label">Min Bots</span>
           <input type="range" min="0" max="15" step="1" value={minBots}
