@@ -142,6 +142,8 @@ If I had one more sprint, I would build side by side match comparison. The data 
 
 Beyond that: storm path visualization (overlaying storm progression on the map), spatial context for the AI analyst (feeding it heatmap grid data instead of just counts), and player retention funnels (entry to loot to combat to extraction).
 
+If this tool were used in production, I would add a comparison mode for A/B testing map changes. When the Level Design team moves a loot spawn or adds an extraction point, they need to compare player behavior before vs after. The tool already loads data by date. Adding a split view showing "Feb 10-11 (before change) vs Feb 12-14 (after change)" with side by side heatmaps would let the team measure the impact of their changes on map utilization, kill distribution, and storm death rates.
+
 ## Time
 
 About 10 to 12 hours total. Data exploration and architecture decisions took 2 hours. Core visualization and coordinate mapping took 4 hours. Filters, timeline, and UX iteration took 3 hours. AI analyst and documentation took the rest.
