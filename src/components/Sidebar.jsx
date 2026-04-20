@@ -11,6 +11,9 @@ export default function Sidebar({
   showPaths, setShowPaths,
 }) {
   const [filterMode, setFilterMode] = useState('contains')
+  const [minBots, setMinBots] = useState(0)
+  const [minEvents, setMinEvents] = useState(0)
+
   const heatmapOptions = [
     { key: 'none', label: 'Off' },
     { key: 'kills', label: 'Kill Zones' },
@@ -19,19 +22,20 @@ export default function Sidebar({
     { key: 'utilization', label: 'Map Usage' },
   ]
 
-const filteredMatches = matches.filter(m => {
-    if (showHumans && showBots) return true
-    if (!showHumans && !showBots) return false
-
-    if (filterMode === 'contains') {
-      // Show matches that CONTAIN selected type
-      if (showHumans && !showBots) return m.humans > 0
-      if (!showHumans && showBots) return m.bots > 0
+  const filteredMatches = matches.filter(m => {
+    if (showHumans && showBots) { /* no player filter */ }
+    else if (!showHumans && !showBots) return false
+    else if (filterMode === 'contains') {
+      if (showHumans && !showBots && m.humans <= 0) return false
+      if (!showHumans && showBots && m.bots <= 0) return false
     } else {
-      // Show matches with ONLY selected type
-      if (showHumans && !showBots) return m.humans > 0 && m.bots === 0
-      if (!showHumans && showBots) return m.bots > 0 && m.humans === 0
+      if (showHumans && !showBots && (m.humans <= 0 || m.bots > 0)) return false
+      if (!showHumans && showBots && (m.bots <= 0 || m.humans > 0)) return false
     }
+
+    if (m.bots < minBots) return false
+    const totalEvents = Object.values(m.events || {}).reduce((a, b) => a + b, 0)
+    if (totalEvents < minEvents) return false
     return true
   })
 
@@ -54,7 +58,7 @@ const filteredMatches = matches.filter(m => {
         </select>
       </div>
 
-<div className="sidebar-section">
+      <div className="sidebar-section">
         <h3>Filter by Player Type</h3>
         <ToggleRow label="Humans" checked={showHumans} onChange={setShowHumans} />
         <ToggleRow label="Bots" checked={showBots} onChange={setShowBots} />
@@ -91,6 +95,24 @@ const filteredMatches = matches.filter(m => {
       </div>
 
       <div className="sidebar-section">
+        <h3>Match Filters</h3>
+        <div className="slider-row">
+          <span className="slider-label">Min Bots</span>
+          <input type="range" min="0" max="15" step="1" value={minBots}
+            onChange={e => setMinBots(parseInt(e.target.value))}
+            className="size-slider" />
+          <span className="slider-value">{minBots}</span>
+        </div>
+        <div className="slider-row">
+          <span className="slider-label">Min Events</span>
+          <input type="range" min="0" max="100" step="5" value={minEvents}
+            onChange={e => setMinEvents(parseInt(e.target.value))}
+            className="size-slider" />
+          <span className="slider-value">{minEvents}</span>
+        </div>
+      </div>
+
+      <div className="sidebar-section">
         <h3>Matches ({filteredMatches.length})</h3>
         {selectedMatch && (
           <button className="heatmap-btn" onClick={() => setSelectedMatch(null)} style={{ marginBottom: 4 }}>
@@ -110,7 +132,7 @@ const filteredMatches = matches.filter(m => {
                 <div className="match-info">
                   <span>👤{m.humans}</span>
                   <span>🤖{m.bots}</span>
-                  <span>⚡{Object.values(m.events || {}).reduce((a, b) => a + b, 0)}</span>
+                  <span>#{Object.values(m.events || {}).reduce((a, b) => a + b, 0)}</span>
                   <span>{dateFormatted}</span>
                 </div>
               </div>
