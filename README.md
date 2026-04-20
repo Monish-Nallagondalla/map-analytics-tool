@@ -22,7 +22,7 @@ Each event type can be toggled on/off and resized independently through the floa
 - **Map selector:** Switch between AmbroseValley, GrandRift, and Lockdown
 - **Date filter:** Filter by specific date (dd/mm/yyyy format) or view all dates
 - **Player type filter:** Toggle humans and bots independently. This filters both the match list and map content. Choose between "Contains" mode (matches with selected type) and "Exclusive" mode (matches with only that type)
-- **Match selection:** Click any match in the sidebar to isolate it. Full match IDs are visible and scrollable
+- **Match selection:** Click any match in the sidebar to isolate it. Full match IDs are visible and scrollable. Each match shows player composition at a glance (e.g. 👤1 🤖6 ⚡45 10/02/2026 means 1 human, 6 bots, 45 events, played on 10th Feb 2026)
 
 ### Match Search
 Search bar in the top right header. Type any part of a match ID to find it instantly. Clicking a result auto switches to the correct map and selects the match.
