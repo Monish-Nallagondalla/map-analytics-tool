@@ -43,10 +43,14 @@ Select any match to activate the timeline bar at the bottom. Controls:
 - Shows percentage progress and event count (visible/total)
 
 ### Quick Actions
+### Quick Actions
 Dropdown in the header with preset Level Designer workflows:
 - "Where are the kill hotspots?" activates Kill Zones heatmap
 - "Show me dead zones" activates Map Usage overlay
+- "Where do players die to storm?" activates Death Zones heatmap with paths hidden
 - "How do bots navigate?" toggles to bots only with paths visible
+- "Show human player routes" toggles to humans only with paths visible
+- "High traffic areas" activates Traffic density heatmap
 - "Reset all filters" returns everything to defaults
 
 ### AI Analyst (Optional)
