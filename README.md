@@ -105,31 +105,34 @@ npm run build
 Output is in the dist/ folder, ready for static hosting.
 
 ## Project Structure
+
+```
 lila-viz/
 ├── public/
-│   ├── data/          # Processed JSON (per map events + match index)
-│   ├── minimaps/      # Resized minimap images (1024x1024)
+│   ├── data/                  # Processed JSON (per map events + match index)
+│   ├── minimaps/              # Resized minimap images (1024x1024)
 │   ├── lila-logo.png
 │   └── favicon.png
 ├── src/
 │   ├── components/
-│   │   ├── MapView.jsx      # Canvas rendering, zoom/pan, legend
-│   │   ├── Sidebar.jsx      # Filters, match list
-│   │   ├── Timeline.jsx     # Playback controls
-│   │   ├── StatsBar.jsx     # Match statistics
-│   │   ├── QuickActions.jsx # Preset workflows
-│   │   ├── ApiKeyModal.jsx  # AI key entry
-│   │   └── AiChat.jsx       # AI analyst panel
+│   │   ├── MapView.jsx        # Canvas rendering, zoom/pan, legend
+│   │   ├── Sidebar.jsx        # Filters, match list
+│   │   ├── Timeline.jsx       # Playback controls
+│   │   ├── StatsBar.jsx       # Match statistics
+│   │   ├── QuickActions.jsx   # Preset workflows
+│   │   ├── ApiKeyModal.jsx    # AI key entry
+│   │   └── AiChat.jsx         # AI analyst panel
 │   ├── App.jsx
 │   ├── App.css
 │   └── main.jsx
-├── preprocess.py      # Parquet to JSON pipeline
-├── optimize.py        # Data size optimization
-├── analyze.py         # Data analysis script
-├── verify_coords.py   # Coordinate mapping verification
+├── preprocess.py              # Parquet to JSON pipeline
+├── optimize.py                # Data size optimization
+├── analyze.py                 # Data analysis script
+├── verify_coords.py           # Coordinate mapping verification
 ├── ARCHITECTURE.md
 ├── INSIGHTS.md
 └── README.md
+```
 
 ## Documentation
 
